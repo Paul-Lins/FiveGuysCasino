@@ -150,6 +150,17 @@ input {
   margin-top: 15px;
 }
 
+.brand-mark {
+			width: 34px;
+			height: 34px;
+			display: grid;
+			place-items: center;
+			border: 1px solid var(--brand-dark);
+			color: var(--brand-dark);
+			font-family: var(--serif);
+			font-size: 17px;
+		}
+
 .message {
   min-height: 20px;
   color: var(--error);
