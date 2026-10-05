@@ -10,16 +10,14 @@
 <div class="auth-shell">
   <section class="auth-brand">
     <p class="eyebrow">Five Guys Casino</p>
-    <h1>Authentication and Role-Based Access</h1>
-    <p>Login information is checked by the Flask API against MongoDB.</p>
+    <h1>Five Guys Casino</h1>
     <div class="flow">
-      <span>Login Form</span><span>→</span><span>Flask API</span><span>→</span>
-      <span>MongoDB</span><span>→</span><span>Role Check</span>
+      <span>Have a problem with Gambling?</span><span>Call 1-800-GAMBLER</span>
     </div>
   </section>
 
   <section class="auth-card">
-    <div class="logo">NC</div>
+    <div class="logo">FGC</div>
     <h2>Sign In</h2>
     <p class="muted">Use your account to continue.</p>
 
@@ -31,8 +29,11 @@
         <input id="password" type="password" required>
       </label>
       <button type="submit" class="primary">Login</button>
+      <div class="create-account">
+        <button type="button" class="secondary" id="createAccountButton">Create Account</button>
+      </div>
     </form>
-
+    
     <p id="message" class="message"></p>
 
     <div class="demo-box">

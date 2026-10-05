@@ -1,0 +1,537 @@
+:root {
+  --bg-page: #f7f3f3;
+  --text-primary: #251818;
+  --text-muted: #6f4a4a;
+  --border-soft: #e9d8d8;
+  --border-subtle: #d9b7b7;
+  --panel-light: #ffffff;
+  --panel-warm: #fff2f2;
+  --brand-dark: #2a0c0c;
+  --brand-mid: #8b1e1e;
+  --brand-accent: #b62a2a;
+  --brand-secondary: #9b2828;
+  --topbar: #1f1a1a;
+  --adminbar: #4b1111;
+  --admin-accent: #8f1d1d;
+  --error: #b32626;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text-primary);
+  background: var(--bg-page);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.auth-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--brand-dark), var(--brand-mid));
+}
+
+.auth-shell {
+  max-width: 1100px;
+  margin: auto;
+  min-height: 100vh;
+  padding: 50px 24px;
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 40px;
+  align-items: center;
+}
+
+.auth-brand {
+  color: #fff;
+}
+
+.auth-brand h1 {
+  font-size: 52px;
+  line-height: 1.05;
+  margin: 8px 0 18px;
+}
+
+.auth-brand > p {
+  color: #f6d9d9;
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: #ff9a9a;
+}
+
+.flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.flow span {
+  background: #ffffff14;
+  border: 1px solid #ffffff22;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.auth-card {
+  background: var(--panel-light);
+  padding: 32px;
+  border-radius: 18px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.27);
+}
+
+.logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--brand-secondary);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: bold;
+}
+
+.auth-card h2 {
+  font-size: 28px;
+  margin: 18px 0 5px;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.auth-card label {
+  display: block;
+  font-weight: bold;
+  font-size: 13px;
+  margin: 16px 0;
+}
+
+.auth-card input {
+  width: 100%;
+  padding: 12px;
+  margin-top: 7px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+}
+
+.primary {
+  width: 100%;
+  border: 0;
+  background: var(--brand-accent);
+  color: #fff;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: bold;
+}
+
+.secondary{
+    width: 100%;
+    border: 0;
+    background: var(--brand-secondary);
+    color: #fff;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+.create-account {
+  margin-top: 15px;
+}
+
+.message {
+  min-height: 20px;
+  color: var(--error);
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.demo-box {
+  background: var(--panel-warm);
+  border: 1px solid #f0c8c8;
+  border-radius: 10px;
+  padding: 13px;
+  margin-top: 18px;
+  font-size: 12px;
+}
+
+.demo-box p {
+  margin: 5px 0;
+}
+
+.topbar {
+  background: var(--topbar);
+  color: #fff;
+}
+
+.adminbar {
+  background: var(--adminbar);
+}
+
+.nav {
+  max-width: 1100px;
+  margin: auto;
+  padding: 16px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nav strong,
+.nav span {
+  display: block;
+}
+
+.nav span {
+  color: #d3d3d3;
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.nav button {
+  background: transparent;
+  color: #fff;
+  border: 1px solid #ffffff55;
+  border-radius: 7px;
+  padding: 8px 13px;
+}
+
+.dashboard {
+  max-width: 1100px;
+  margin: auto;
+  padding: 40px 22px;
+}
+
+.welcome {
+  background: #fff;
+  border-radius: 15px;
+  padding: 30px;
+  border: 1px solid var(--border-soft);
+}
+
+.adminwelcome {
+  border-left: 5px solid var(--admin-accent);
+}
+
+.welcome h1 {
+  font-size: 38px;
+  margin: 5px 0 10px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  padding: 22px;
+}
+
+.panel h2 {
+  margin-top: 0;
+}
+
+@media (max-width: 800px) {
+  .auth-shell,
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-brand h1 {
+    font-size: 38px;
+  }
+}
+/* =====================================================
+   GAME STYLING
+   ===================================================== */
+
+.game-container {
+    background-color: #1e1e1e;
+    color: white;
+
+    width: 90%;
+    max-width: 800px;
+
+    margin: 30px auto;
+    padding: 25px;
+
+    border-radius: 15px;
+
+    text-align: center;
+
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+
+.game-container h2 {
+    margin-top: 0;
+    font-size: 30px;
+}
+
+
+/* =====================================================
+   BLACKJACK
+   ===================================================== */
+
+.blackjack-area {
+    display: flex;
+
+    justify-content: space-around;
+
+    gap: 30px;
+
+    margin: 25px 0;
+}
+
+
+.dealer-area,
+.player-area {
+    flex: 1;
+}
+
+
+.cards {
+    display: flex;
+
+    justify-content: center;
+
+    gap: 10px;
+
+    min-height: 90px;
+}
+
+
+.playing-card {
+    background-color: white;
+
+    color: black;
+
+    width: 60px;
+    height: 85px;
+
+    border-radius: 8px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    font-size: 25px;
+    font-weight: bold;
+
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+}
+
+
+.game-buttons {
+    display: flex;
+
+    justify-content: center;
+
+    gap: 10px;
+
+    margin-top: 20px;
+}
+
+
+.game-buttons button,
+#rouletteButton {
+    padding: 10px 20px;
+
+    border: none;
+
+    border-radius: 7px;
+
+    background-color: #3498db;
+
+    color: white;
+
+    font-size: 16px;
+
+    cursor: pointer;
+}
+
+
+.game-buttons button:hover,
+#rouletteButton:hover {
+    background-color: #2980b9;
+}
+
+
+.game-buttons button:disabled,
+#rouletteButton:disabled {
+    background-color: #555;
+
+    cursor: not-allowed;
+}
+
+
+#blackjackMessage {
+    font-size: 20px;
+
+    font-weight: bold;
+
+    min-height: 25px;
+}
+
+
+/* =====================================================
+   ROULETTE
+   ===================================================== */
+
+.roulette-controls {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    gap: 10px;
+
+    max-width: 300px;
+
+    margin: 0 auto;
+}
+
+
+.roulette-controls label {
+    margin-top: 10px;
+
+    font-weight: bold;
+}
+
+
+.roulette-controls select,
+.roulette-controls input {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    padding: 10px;
+
+    border-radius: 6px;
+
+    border: 1px solid #777;
+
+    font-size: 16px;
+}
+
+
+.roulette-controls select {
+    cursor: pointer;
+}
+
+
+.roulette-controls input {
+    background-color: white;
+
+    color: black;
+}
+
+
+#rouletteButton {
+    margin-top: 15px;
+
+    width: 100%;
+}
+
+
+.roulette-result {
+    margin-top: 30px;
+
+    min-height: 130px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+}
+
+
+.roulette-number {
+    width: 90px;
+    height: 90px;
+
+    border-radius: 50%;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    color: white;
+
+    font-size: 35px;
+
+    font-weight: bold;
+
+    border: 4px solid white;
+}
+
+
+.roulette-number.red {
+    background-color: #d63031;
+}
+
+
+.roulette-number.black {
+    background-color: #111;
+}
+
+
+.roulette-number.green {
+    background-color: #00a86b;
+}
+
+
+.spinning-text {
+    font-size: 25px;
+
+    font-weight: bold;
+
+    animation: spinning 0.8s infinite alternate;
+}
+
+
+@keyframes spinning {
+
+    from {
+        opacity: 0.4;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+
+#rouletteMessage {
+    font-size: 18px;
+
+    font-weight: bold;
+
+    min-height: 25px;
+}
+
+.input-error {
+    border: 2px solid red;
+}

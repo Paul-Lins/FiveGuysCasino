@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="theme-color" content="#171918">
+	<title>Five Guys Casino | Admin</title>
+	<style>
+		:root {
+			color-scheme: light;
+			--ink: #202321;
+			--muted: #747a75;
+			--line: #e3e5e1;
+			--paper: #fff;
+			--canvas: #f4f5f2;
+			--red: #a52a27;
+			--red-dark: #7c1e1c;
+			--green: #2c7052;
+			--amber: #a36c1c;
+			--header: #171918;
+			--serif: Georgia, "Times New Roman", serif;
+			--sans: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+		}
+
+		* { box-sizing: border-box; }
+		body {
+			margin: 0;
+			color: var(--ink);
+			background: var(--canvas);
+			font-family: var(--sans);
+			font-size: 14px;
+		}
+		button, input, select { font: inherit; }
+		button { cursor: pointer; }
+		.topbar {
+			min-height: 68px;
+			padding: 0 5vw;
+			background: var(--header);
+			color: #f8f7f2;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 20px;
+			border-bottom: 3px solid var(--red);
+		}
+		.brand { display: flex; align-items: center; gap: 12px; }
+		.brand-mark {
+			width: 34px;
+			height: 34px;
+			display: grid;
+			place-items: center;
+			border: 1px solid #a9aea8;
+			color: #f1eee6;
+			font-family: var(--serif);
+			font-size: 17px;
+		}
+		.brand-name { font-family: var(--serif); font-size: 17px; }
+		.brand-sub { display: block; margin-top: 2px; color: #aeb3ad; font-size: 10px; text-transform: uppercase; }
+		.top-actions { display: flex; align-items: center; gap: 18px; }
+		.preview-label {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			color: #e6c887;
+			font-size: 11px;
+			font-weight: 700;
+			letter-spacing: .04em;
+			text-transform: uppercase;
+		}
+		.preview-label::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #dfad49; }
+		.admin-label { color: #d3d7d1; font-size: 12px; }
+		main { width: min(1280px, 100% - 48px); margin: 0 auto; padding: 36px 0 56px; }
+		.page-heading {
+			display: flex;
+			align-items: end;
+			justify-content: space-between;
+			gap: 20px;
+			margin-bottom: 25px;
+		}
+		.eyebrow { margin: 0 0 8px; color: var(--red); font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+		h1 { margin: 0; font-family: var(--serif); font-size: clamp(27px, 4vw, 38px); font-weight: 500; }
+		.subheading { margin: 7px 0 0; color: var(--muted); }
+		.refresh-button {
+			padding: 9px 13px;
+			border: 1px solid #cfd3ce;
+			border-radius: 4px;
+			background: var(--paper);
+			color: var(--ink);
+			font-size: 12px;
+			font-weight: 700;
+		}
+		.refresh-button:hover { border-color: var(--red); color: var(--red-dark); }
+		.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); background: var(--paper); }
+		.stat { min-height: 102px; padding: 19px 22px; }
+		.stat + .stat { border-left: 1px solid var(--line); }
+		.stat-label { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+		.stat-value { display: block; margin-top: 9px; font-family: var(--serif); font-size: 29px; font-variant-numeric: tabular-nums; }
+		.list-section { margin-top: 26px; border: 1px solid var(--line); background: var(--paper); }
+		.section-head { padding: 20px 22px 15px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+		.section-head h2 { margin: 0; font-family: var(--serif); font-size: 21px; font-weight: 500; }
+		.result-count { color: var(--muted); font-size: 12px; }
+		.filters { padding: 0 22px 16px; display: flex; flex-wrap: wrap; gap: 10px; }
+		.search-wrap { position: relative; flex: 1 1 250px; }
+		.search-wrap::before { content: "⌕"; position: absolute; top: 7px; left: 11px; color: var(--muted); font-size: 20px; }
+		.search, .filter-select {
+			width: 100%;
+			min-height: 38px;
+			padding: 8px 11px;
+			border: 1px solid #d7dad5;
+			border-radius: 3px;
+			outline: none;
+			background: #fff;
+			color: var(--ink);
+		}
+		.search { padding-left: 35px; }
+		.search:focus, .filter-select:focus { border-color: var(--red); box-shadow: 0 0 0 2px #a52a2717; }
+		.filter-select { width: auto; min-width: 155px; }
+		.table-wrap { overflow-x: auto; border-top: 1px solid var(--line); }
+		table { width: 100%; min-width: 800px; border-collapse: collapse; text-align: left; }
+		th { padding: 11px 15px; background: #f8f8f6; color: #656b66; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+		td { padding: 14px 15px; border-top: 1px solid #eceeeb; vertical-align: middle; }
+		tbody tr:hover { background: #fbfbf9; }
+		.user-cell { min-width: 200px; }
+		.user-name { display: block; font-weight: 700; }
+		.user-email { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+		.amount { font-variant-numeric: tabular-nums; white-space: nowrap; }
+		.positive { color: var(--green); font-weight: 700; }
+		.status { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 12px; }
+		.status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #55906e; }
+		.status.restricted { color: var(--amber); }
+		.status.restricted::before { background: #c28b37; }
+		.manage-button { border: 0; background: transparent; color: var(--red-dark); font-size: 12px; font-weight: 800; padding: 7px 4px; }
+		.manage-button:hover { text-decoration: underline; }
+		.details-row td { padding: 0; background: #fafaf8; }
+		.details-content { padding: 15px 18px 17px; border-top: 1px dashed #dfe2dc; }
+		.details-title { margin: 0 0 11px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+		.game-controls { display: flex; flex-wrap: wrap; gap: 9px; }
+		.game-toggle {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			min-height: 34px;
+			padding: 6px 10px;
+			border: 1px solid #d9ddd7;
+			border-radius: 3px;
+			background: #fff;
+			color: var(--ink);
+			font-size: 12px;
+		}
+		.game-toggle[aria-pressed="false"] { border-color: #dfc7c4; color: var(--red-dark); background: #fff8f7; }
+		.toggle-dot { width: 8px; height: 8px; border-radius: 50%; background: #57916f; }
+		.game-toggle[aria-pressed="false"] .toggle-dot { background: #bb5148; }
+		.footnote { padding: 12px 22px 15px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+		.empty-state { padding: 36px 20px; text-align: center; color: var(--muted); }
+		.toast {
+			position: fixed;
+			right: 22px;
+			bottom: 22px;
+			max-width: min(390px, calc(100vw - 44px));
+			padding: 12px 15px;
+			border-left: 3px solid var(--amber);
+			background: #242724;
+			color: #fff;
+			box-shadow: 0 8px 24px #17191826;
+			font-size: 12px;
+			opacity: 0;
+			transform: translateY(8px);
+			transition: opacity .18s ease, transform .18s ease;
+			pointer-events: none;
+		}
+		.toast.visible { opacity: 1; transform: translateY(0); }
+		@media (max-width: 700px) {
+			.topbar { padding: 0 18px; }
+			.admin-label { display: none; }
+			main { width: calc(100% - 28px); padding-top: 25px; }
+			.page-heading { align-items: flex-start; flex-direction: column; }
+			.stats { grid-template-columns: 1fr; }
+			.stat { min-height: 0; padding: 14px 17px; display: flex; justify-content: space-between; align-items: center; }
+			.stat + .stat { border-left: 0; border-top: 1px solid var(--line); }
+			.stat-value { margin: 0; font-size: 23px; }
+			.section-head { padding: 16px 15px 12px; }
+			.filters { padding: 0 15px 14px; }
+			.filter-select { flex: 1 1 140px; }
+			.footnote { padding-left: 15px; padding-right: 15px; }
+		}
+		@media (prefers-reduced-motion: reduce) {
+			*, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+		}
+	</style>
+</head>
+<body>
+	<header class="topbar">
+		<div class="brand" aria-label="Five Guys Casino administration">
+			<div class="brand-mark" aria-hidden="true">5G</div>
+			<div><span class="brand-name">Five Guys Casino</span><span class="brand-sub">Administration</span></div>
+		</div>
+		<div class="top-actions">
+			<span class="preview-label" id="connectionStatus" aria-live="polite">Connecting</span>
+			<span class="admin-label">Admin workspace</span>
+		</div>
+	</header>
+
+	<main>
+		<div class="page-heading">
+			<div>
+				<p class="eyebrow">Operations / Players</p>
+				<h1>Player overview</h1>
+				<p class="subheading">Review player winnings and game access.</p>
+			</div>
+			<button class="refresh-button" id="refreshPlayers" type="button" title="Reload player data">↻ &nbsp;Refresh players</button>
+		</div>
+
+		<section class="stats" aria-label="Player summary">
+			<div class="stat"><span class="stat-label">Registered players</span><strong class="stat-value" id="playerCount">0</strong></div>
+			<div class="stat"><span class="stat-label">Total winnings</span><strong class="stat-value" id="totalWinnings">$0.00</strong></div>
+			<div class="stat"><span class="stat-label">Total profit</span><strong class="stat-value" id="totalProfit">$0.00</strong></div>
+			<div class="stat"><span class="stat-label">Restricted players</span><strong class="stat-value" id="restrictedCount">0</strong></div>
+		</section>
+
+		<section class="list-section" aria-labelledby="playersHeading">
+			<div class="section-head">
+				<h2 id="playersHeading">Players</h2>
+				<span class="result-count" id="resultCount" aria-live="polite"></span>
+			</div>
+			<div class="filters">
+				<label class="search-wrap"><span class="visually-hidden" hidden>Search players</span><input class="search" id="searchPlayers" type="search" placeholder="Search name or email" autocomplete="off" aria-label="Search players by name or email"></label>
+				<select class="filter-select" id="statusFilter" aria-label="Filter by game access">
+					<option value="all">All access states</option>
+					<option value="open">All games enabled</option>
+					<option value="restricted">Has restricted games</option>
+				</select>
+			</div>
+			<div class="table-wrap">
+				<table>
+					<thead><tr><th scope="col">Player</th><th scope="col">Balance</th><th scope="col">Total winnings</th><th scope="col">Game access</th><th scope="col">Manage</th></tr></thead>
+					<tbody id="playersBody"></tbody>
+				</table>
+				<div class="empty-state" id="emptyState" hidden>No players match your search.</div>
+			</div>
+			<div class="footnote">Balances, winnings, and casino profit are read from MongoDB. Game access changes are saved immediately.</div>
+		</section>
+	</main>
+	<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+	<script>
+		const gameNames = ["Blackjack", "Roulette", "Slots", "Coin Flip"];
+		let players = [];
+		let openPlayerId = null;
+		let toastTimer;
+		let loadError = "";
+
+		function escapeHtml(value) {
+			return String(value).replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
+		}
+
+		function money(value) {
+			return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
+		}
+
+		function renderSummary() {
+			document.getElementById("playerCount").textContent = players.length;
+			document.getElementById("totalWinnings").textContent = money(players.reduce((sum, player) => sum + player.winnings, 0));
+			document.getElementById("totalProfit").textContent = money(players.reduce((sum, player) => sum + player.profit, 0));
+			document.getElementById("restrictedCount").textContent = players.filter(player => player.blocked.length > 0).length;
+		}
+
+		async function apiRequest(url, options = {}) {
+			const response = await fetch(url, {
+				...options,
+				credentials: "same-origin",
+				headers: { "Content-Type": "application/json", ...options.headers }
+			});
+			const data = await response.json().catch(() => ({}));
+			if (!response.ok) {
+				if (response.status === 401) window.location.href = "/";
+				throw new Error(data.error || `Request failed (${response.status})`);
+			}
+			return data;
+		}
+
+		async function loadPlayers() {
+			const refreshButton = document.getElementById("refreshPlayers");
+			const connectionStatus = document.getElementById("connectionStatus");
+			refreshButton.disabled = true;
+			connectionStatus.textContent = "Connecting";
+			loadError = "";
+			try {
+				const data = await apiRequest("/api/admin/players");
+				players = data.players.map(player => ({
+					id: String(player.id),
+					name: player.name || "Unnamed player",
+					email: player.email || "",
+					balance: Number(player.balance) || 0,
+					winnings: Number(player.winnings) || 0,
+					profit: Number(player.profit) || 0,
+					blocked: Array.isArray(player.blocked) ? player.blocked : []
+				}));
+				connectionStatus.textContent = "Live data";
+				renderPlayers();
+			} catch (error) {
+				connectionStatus.textContent = "Connection issue";
+				loadError = error.message || "Could not load players.";
+				players = [];
+				renderPlayers();
+				showToast(loadError);
+			} finally {
+				refreshButton.disabled = false;
+			}
+		}
+
+		function renderPlayers() {
+			const query = document.getElementById("searchPlayers").value.trim().toLowerCase();
+			const status = document.getElementById("statusFilter").value;
+			const visiblePlayers = players.filter(player => {
+				const matchesSearch = `${player.name} ${player.email}`.toLowerCase().includes(query);
+				const hasRestrictions = player.blocked.length > 0;
+				return matchesSearch && (status === "all" || (status === "restricted") === hasRestrictions);
+			});
+			const body = document.getElementById("playersBody");
+			document.getElementById("resultCount").textContent = `${visiblePlayers.length} of ${players.length} players`;
+			const emptyState = document.getElementById("emptyState");
+			emptyState.hidden = visiblePlayers.length !== 0;
+			emptyState.textContent = loadError || "No players match your search.";
+
+			body.innerHTML = visiblePlayers.map(player => {
+				const restricted = player.blocked.length > 0;
+				const isOpen = openPlayerId === player.id;
+				const accessText = restricted ? `${player.blocked.length} game${player.blocked.length === 1 ? "" : "s"} restricted` : "All games enabled";
+				const controls = gameNames.map(game => {
+					const enabled = !player.blocked.includes(game);
+					return `<button class="game-toggle" type="button" data-player="${escapeHtml(player.id)}" data-game="${escapeHtml(game)}" aria-pressed="${enabled}" aria-label="${enabled ? "Blacklist" : "Allow"} ${escapeHtml(game)} for ${escapeHtml(player.name)}"><span class="toggle-dot" aria-hidden="true"></span>${escapeHtml(game)}: ${enabled ? "Allowed" : "Blocked"}</button>`;
+				}).join("");
+				return `<tr>
+					<td class="user-cell"><span class="user-name">${escapeHtml(player.name)}</span><span class="user-email">${escapeHtml(player.email)}</span></td>
+					<td class="amount">${money(player.balance)}</td>
+					<td class="amount positive">${money(player.winnings)}</td>
+					<td><span class="status${restricted ? " restricted" : ""}">${accessText}</span></td>
+					<td><button class="manage-button" type="button" data-manage="${escapeHtml(player.id)}" aria-expanded="${isOpen}">${isOpen ? "Close" : "Manage access"}</button></td>
+				</tr>${isOpen ? `<tr class="details-row"><td colspan="5"><div class="details-content"><p class="details-title">Game access for ${escapeHtml(player.name)}</p><div class="game-controls">${controls}</div></div></td></tr>` : ""}`;
+			}).join("");
+			renderSummary();
+		}
+
+		function showToast(message) {
+			const toast = document.getElementById("toast");
+			toast.textContent = message;
+			toast.classList.add("visible");
+			window.clearTimeout(toastTimer);
+			toastTimer = window.setTimeout(() => toast.classList.remove("visible"), 2800);
+		}
+
+		document.getElementById("playersBody").addEventListener("click", async event => {
+			const manageButton = event.target.closest("[data-manage]");
+			if (manageButton) {
+				const playerId = manageButton.dataset.manage;
+				openPlayerId = openPlayerId === playerId ? null : playerId;
+				renderPlayers();
+				return;
+			}
+
+			const gameButton = event.target.closest("[data-game]");
+			if (!gameButton) return;
+			const player = players.find(item => item.id === gameButton.dataset.player);
+			if (!player) return;
+			const game = gameButton.dataset.game;
+			const enabled = player.blocked.includes(game);
+			gameButton.disabled = true;
+			try {
+				const updatedPlayer = await apiRequest(`/api/admin/players/${encodeURIComponent(player.id)}/games`, {
+					method: "PATCH",
+					body: JSON.stringify({ game, enabled })
+				});
+				players = players.map(item => item.id === player.id ? {
+					...item,
+					balance: Number(updatedPlayer.balance) || 0,
+					winnings: Number(updatedPlayer.winnings) || 0,
+					profit: Number(updatedPlayer.profit) || 0,
+					blocked: Array.isArray(updatedPlayer.blocked) ? updatedPlayer.blocked : []
+				} : item);
+				renderPlayers();
+				showToast(`${game} access saved for ${player.name}.`);
+			} catch (error) {
+				gameButton.disabled = false;
+				showToast(error.message || "Could not update game access.");
+			}
+		});
+
+		document.getElementById("searchPlayers").addEventListener("input", renderPlayers);
+		document.getElementById("statusFilter").addEventListener("change", renderPlayers);
+		document.getElementById("refreshPlayers").addEventListener("click", loadPlayers);
+
+		loadPlayers();
+	</script>
+</body>
+</html>
