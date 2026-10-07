@@ -1,7 +1,146 @@
-<!-- =========================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Five Guys Casino</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+                <div id="betHistory" class="bet-history">
+                    <!-- Bet history will be dynamically inserted here -->
+                </div>
+    <header class="topbar">
+        <div class="nav">
+            <span class="logo">Five Guys Casino</span>
+            <span>Welcome, <strong id= "username">player</strong></span>
+            <span>🪙 <strong id="chipBalance">0</strong> chips</span>
+            <button id="addFundsButton" type="button">Add Funds</button>
+            <button id="logoutButton" type="button">Logout</button>
+        </div>
+    </header>
+
+    <main class="dashboard">
+        <section class="grid">
+        <!--
+        =========================
+        BLACKJACK
+        ========================= -->
+        
+            <section class="game-container" id="blackjackGame">
+
+                <h2>♠ Blackjack ♠</h2>
+
+                <div class="blackjack-area">
+
+                    <div class="dealer-area">
+                        <h3>Dealer</h3>
+                        <div id="dealerCards" class="cards"></div>
+                        <p>Dealer Total: <span id="dealerTotal">?</span></p>
+                    </div>
+
+                    <div class="player-area">
+                        <h3>You</h3>
+                        <div id="playerCards" class="cards"></div>
+                        <p>Your Total: <span id="playerTotal">0</span></p>
+                    </div>
+
+                </div>
+
+                <p id="blackjackMessage">Press Deal to start!</p>
+
+                <div class="game-buttons">
+                    <button id="blackjackDeal">Deal</button>
+                    <button id="blackjackHit" disabled>Hit</button>
+                    <button id="blackjackStand" disabled>Stand</button>
+                </div>
+
+            </section>
+
+            <!-- =========================
+            ROULETTE
+            ========================= -->
+            <section class="game-container" id="rouletteGame">
+
+                <h2>🎰 Roulette 🎰</h2>
+
+                <div class="roulette-controls">
+
+                    <label for="rouletteColor">Choose a color:</label>
+
+                    <select id="rouletteColor">
+                        <option value="red">Red</option>
+                        <option value="black">Black</option>
+                        <option value="green">Green</option>
+                    </select>
+
+
+                    <label for="rouletteBet">How much do you want to bet?</label>
+
+                    <input
+                        type="number"
+                        id="rouletteBet"
+                        min="1"
+                        step="1"
+                        placeholder="Enter amount"
+                    >
+
+                    <button id="rouletteButton">Spin</button>
+
+                </div>
+
+                <div id="rouletteResult" class="roulette-result">
+                    <p>Make your choice and spin!</p>
+                </div>
+
+                <p id="rouletteMessage"></p>
+
+            </section>
+        </section>
+
+        <section class"grid">
+
+            <div class="panel">
+                <h2>Bet History</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Game</th>
+                            <th>Wager</th>
+                            <th>Result</th>
+                            <th>Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <tr><td>Blackjack</td><td>50</td><td>Win</td><td>1050</td></tr>
+                        <tr><td>Roulette</td><td>100</td><td>Loss</td><td>950</td></tr>
+                        <tr><td>Roulette</td><td>25</td><td>Win</td><td>975</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="panel">
+                <h2>Leaderboard</h2>
+                <ol id="leaderboardList">
+                    <li>troy -5,200</li>
+                    <li>paul - 3,900</li>
+                    <li>logan -2,750</li>
+                </ol>
+            </div>
+
+        </section>
+
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>
+
+
+<!--
+ =========================
      BLACKJACK
      ========================= -->
-
+<!--
 <section class="game-container" id="blackjackGame">
 
     <h2>♠ Blackjack ♠</h2>
@@ -31,12 +170,12 @@
     </div>
 
 </section>
-
+-->
 
 <!-- =========================
      ROULETTE
      ========================= -->
-
+<!--
 <section class="game-container" id="rouletteGame">
 
     <h2>🎰 Roulette 🎰</h2>
@@ -73,3 +212,4 @@
     <p id="rouletteMessage"></p>
 
 </section>
+-->

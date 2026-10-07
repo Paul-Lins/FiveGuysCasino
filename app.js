@@ -1,6 +1,10 @@
 const API_URL = "/api/balance";
-const refreshButton = userInfo.getElementById("refreshButton");
 
+
+
+
+/*
+const refreshButton = userInfo.getElementById("refreshButton");
 function showMessage(text){message.textContent=text;}
 
 
@@ -15,7 +19,7 @@ async function loadBalance(){
     showMessage(error.message);
   }
 }
-
+*/
 
 
 
