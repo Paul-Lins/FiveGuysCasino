@@ -20,7 +20,35 @@ async function loadBalance(){
   }
 }
 */
+// Logout
+const logoutButton = document.getElementById("logoutButton");
 
+logoutButton.addEventListener("click", async () => {
+
+    await fetch("/api/logout", {
+        method: "POST"
+    });
+
+    window.location.href = "/";
+});
+
+
+
+async function loadUser() {
+    
+    const response = await fetch("/api/me");
+
+    if (!response.ok) {
+        window.location.href = "/";
+        return;
+    }
+
+    const data = await response.json();
+
+    document.getElementById("userName").textContent = data.name;
+}
+
+loadUser();
 
 
 
