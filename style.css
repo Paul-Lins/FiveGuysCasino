@@ -199,15 +199,17 @@ input {
   align-items: center;
 }
 
-.nav strong,
 .nav span {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+  color: #d3d3d3;
+  font-size: 14px;
 }
 
-.nav span {
-  color: #d3d3d3;
-  font-size: 12px;
-  margin-top: 3px;
+.nav strong {
+  color: #fff;
 }
 
 .nav button {
