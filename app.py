@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify, send_from_directory, session, redirec
 from werkzeug.security import check_password_hash, generate_password_hash
 from bson import ObjectId
 import os
+import random
+import uuid
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "cs485-class-demo-key")
@@ -12,11 +14,11 @@ app.secret_key = os.environ.get("SECRET_KEY", "cs485-class-demo-key")
 # Database: Five_Guys_Casino
 # Collection: users
 # Create users_collection.
-from pymongo import MongoClient
+from pymongo import MongoClient, ReturnDocument
 client = MongoClient("mongodb://localhost:27017/")
 db = client["Five_Guys_Casino"]
 users_collection = db["users"]
-ADMIN_GAMES = {"Blackjack", "Roulette", "Slots", "Coin Flip"}
+ADMIN_GAMES = {"Blackjack", "Roulette"}
 
 
 def admin_auth_error():
@@ -127,6 +129,269 @@ def current_user():
         "role": session["role"]
     }), 200
     
+@app.get("/api/balance")
+def get_balance():
+    if "user_id" not in session:
+        return jsonify({"error": "Not authenticated"}), 401
+    user = users_collection.find_one({"_id": ObjectId(session["user_id"])})
+    return jsonify({"balance": user.get("balance", 0) if user else 0}), 200
+
+
+@app.get("/api/game-access")
+def get_game_access():
+    if "user_id" not in session or session.get("role") != "user":
+        return jsonify({"error": "Not authenticated"}), 401
+    user = users_collection.find_one(
+        {"_id": ObjectId(session["user_id"]), "active": True},
+        {"blocked_games": 1}
+    )
+    if not user:
+        return jsonify({"error": "Player account is unavailable"}), 404
+    return jsonify({"blocked_games": user.get("blocked_games", [])}), 200
+
+
+@app.post("/api/games/wager")
+def place_game_wager():
+    if "user_id" not in session or session.get("role") != "user":
+        return jsonify({"error": "Not authenticated"}), 401
+
+    data = request.get_json(silent=True) or {}
+    game = data.get("game")
+    amount = data.get("amount")
+    choice = data.get("choice")
+    if not isinstance(game, str) or game not in {"Blackjack", "Roulette"}:
+        return jsonify({"error": "Invalid game"}), 400
+    if isinstance(amount, bool) or not isinstance(amount, int) or amount <= 0 or amount > 9007199254740991:
+        return jsonify({"error": "Wager must be a positive whole number"}), 400
+    if game == "Roulette" and (not isinstance(choice, str) or choice not in {"red", "black", "green"}):
+        return jsonify({"error": "Choose a valid roulette color"}), 400
+
+    bet_id = uuid.uuid4().hex
+    pending_bet = {"id": bet_id, "game": game, "amount": amount}
+    roulette_result = None
+    if game == "Roulette":
+        roulette_result = random.randrange(38)
+        result_color = (
+            "green" if roulette_result in {0, 37}
+            else "red" if roulette_result in {1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36}
+            else "black"
+        )
+        pending_bet.update({"choice": choice, "result": roulette_result, "result_color": result_color})
+
+    user_filter = {
+        "_id": ObjectId(session["user_id"]),
+        "role": "user",
+        "active": True,
+        "blocked_games": {"$ne": game},
+        "balance": {"$gte": amount}
+    }
+    user = users_collection.find_one_and_update(
+        user_filter,
+        {"$inc": {"balance": -amount}, "$push": {"pending_bets": pending_bet}},
+        return_document=ReturnDocument.AFTER
+    )
+    if not user:
+        existing_user = users_collection.find_one({"_id": ObjectId(session["user_id"])})
+        if not existing_user or not existing_user.get("active", False):
+            return jsonify({"error": "Player account is unavailable"}), 404
+        if game in existing_user.get("blocked_games", []):
+            return jsonify({"error": f"Access to {game} is restricted"}), 403
+        return jsonify({"error": "Insufficient balance for this wager"}), 400
+
+    response = {"bet_id": bet_id, "balance": user.get("balance", 0)}
+    if roulette_result is not None:
+        response["result"] = "00" if roulette_result == 37 else roulette_result
+        response["result_color"] = result_color
+    return jsonify(response), 201
+
+
+@app.post("/api/games/settle")
+def settle_game_wager():
+    if "user_id" not in session or session.get("role") != "user":
+        return jsonify({"error": "Not authenticated"}), 401
+
+    data = request.get_json(silent=True) or {}
+    bet_id = data.get("bet_id")
+    if not isinstance(bet_id, str) or not bet_id:
+        return jsonify({"error": "A valid bet ID is required"}), 400
+
+    player_id = ObjectId(session["user_id"])
+    settled_user = users_collection.find_one({"_id": player_id, "settled_bets.id": bet_id})
+    if settled_user:
+        settlement = next(item for item in settled_user.get("settled_bets", []) if item.get("id") == bet_id)
+        return jsonify({
+            "balance": settled_user.get("balance", 0),
+            "payout": settlement["payout"],
+            "net_winnings": settlement["net_winnings"],
+            "outcome": settlement["outcome"],
+            "game": settlement.get("game", "Unknown")
+        }), 200
+
+    user = users_collection.find_one({"_id": player_id, "pending_bets.id": bet_id})
+    if not user:
+        return jsonify({"error": "Wager was already settled or not found"}), 409
+    bet = next(item for item in user.get("pending_bets", []) if item.get("id") == bet_id)
+    amount = bet["amount"]
+
+    if bet["game"] == "Blackjack":
+        outcome = data.get("outcome")
+        payouts = {"win": amount * 2, "push": amount, "loss": 0}
+        if outcome not in payouts:
+            return jsonify({"error": "Invalid blackjack outcome"}), 400
+        payout = payouts[outcome]
+        settled_outcome = outcome
+    else:
+        won = bet["choice"] == bet["result_color"]
+        payout = amount * (18 if bet["choice"] == "green" else 2) if won else 0
+        settled_outcome = "win" if won else "loss"
+
+    update = users_collection.find_one_and_update(
+        {"_id": player_id, "pending_bets.id": bet_id},
+        {
+            "$inc": {
+                "balance": payout,
+                "winnings": max(0, payout - amount),
+                "profit": amount - payout
+            },
+            "$pull": {"pending_bets": {"id": bet_id}},
+            "$push": {
+                "settled_bets": {
+                    "$each": [{
+                        "id": bet_id,
+                        "game": bet["game"],
+                        "amount": amount,
+                        "payout": payout,
+                        "net_winnings": payout - amount,
+                        "outcome": settled_outcome
+                    }]
+                }
+            }
+        },
+        return_document=ReturnDocument.AFTER
+    )
+    if not update:
+        update = users_collection.find_one({"_id": player_id})
+        settled = next((item for item in update.get("settled_bets", []) if item.get("id") == bet_id), None) if update else None
+        if not settled:
+            return jsonify({"error": "Wager was already settled"}), 409
+        payout = settled["payout"]
+        settled_outcome = settled["outcome"]
+
+    return jsonify({
+        "balance": update.get("balance", 0),
+        "payout": payout,
+        "net_winnings": payout - amount,
+        "outcome": settled_outcome,
+        "game": bet["game"]
+    }), 200
+
+
+@app.get("/api/game-history")
+def get_game_history():
+    if "user_id" not in session or session.get("role") != "user":
+        return jsonify({"error": "Not authenticated"}), 401
+
+    try:
+        page = max(1, int(request.args.get("page", "1")))
+    except ValueError:
+        return jsonify({"error": "Page must be a positive integer"}), 400
+
+    user = users_collection.find_one(
+        {"_id": ObjectId(session["user_id"]), "active": True},
+        {"settled_bets": 1}
+    )
+    if not user:
+        return jsonify({"error": "Player account is unavailable"}), 404
+
+    settled_bets = list(reversed(user.get("settled_bets", [])))
+    total_bets = len(settled_bets)
+    total_pages = max(1, (total_bets + 9) // 10)
+    page = min(page, total_pages)
+    start = (page - 1) * 10
+    bets = settled_bets[start:start + 10]
+    return jsonify({
+        "bets": bets,
+        "page": page,
+        "total_pages": total_pages,
+        "total_bets": total_bets
+    }), 200
+
+
+@app.get("/api/players")
+def list_players():
+    if "user_id" not in session:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    if session.get("role") == "user":
+        user = users_collection.find_one(
+            {"_id": ObjectId(session["user_id"]), "role": "user", "active": True},
+            {"name": 1, "email": 1}
+        )
+        if not user:
+            return jsonify({"error": "Player account is unavailable"}), 404
+        return jsonify({
+            "players": [{
+                "id": str(user["_id"]),
+                "name": user.get("name", ""),
+                "email": user.get("email", "")
+            }]
+        }), 200
+
+    if session.get("role") != "admin":
+        return jsonify({"error": "Forbidden"}), 403
+
+    players = [
+        {"id": str(u["_id"]), "name": u.get("name", ""), "email": u.get("email", "")}
+        for u in users_collection.find({"role": "user", "active": True}).sort("name", 1)
+    ]
+    return jsonify({"players": players}), 200
+
+
+@app.post("/api/add-funds")
+def add_funds():
+    if "user_id" not in session:
+        return jsonify({"error": "Not authenticated"}), 401
+    if session.get("role") != "user":
+        return jsonify({"error": "Users can only add funds to their own account"}), 403
+
+    amount = request.get_json(silent=True, force=False) or {}
+    if isinstance(amount, dict):
+        raw_amount = amount.get("amount")
+    else:
+        raw_amount = None
+
+    if isinstance(raw_amount, bool) or not isinstance(raw_amount, int) or raw_amount <= 0:
+        return jsonify({"error": "Amount must be a positive whole number"}), 400
+
+    player_id = session["user_id"]
+    result = users_collection.update_one(
+        {"_id": ObjectId(player_id), "role": "user", "active": True},
+        {"$inc": {"balance": raw_amount}}
+    )
+    if result.matched_count == 0:
+        return jsonify({"error": "Player account is unavailable"}), 404
+
+    player = users_collection.find_one({"_id": ObjectId(player_id)})
+    return jsonify({"name": player.get("name", ""), "balance": player.get("balance", 0)}), 200
+
+
+@app.get("/api/get-leaderboard")
+def get_leaderboard():
+    if "user_id" not in session:
+        return jsonify ({"error": "Not authenticated"}), 401
+
+    players = [
+        {
+            "name": player.get("name", ""),
+            "score": player.get("winnings", 0)
+        }
+        for player in users_collection.find(
+            {"role": "user", "active": True},
+            {"name": 1, "winnings": 1}
+        ).sort("winnings", -1).limit(10)
+    ]
+    return jsonify({"players": players}), 200
+
 # GET /user
 # Require login.
 # Return user.html.
@@ -187,6 +452,23 @@ def admin_players():
             "restricted_count": restricted_count
         }
     }), 200
+
+
+@app.delete("/api/admin/players/<player_id>")
+def delete_player(player_id):
+    auth_error = admin_auth_error()
+    if auth_error:
+        return auth_error
+    if not ObjectId.is_valid(player_id):
+        return jsonify({"error": "Invalid player ID"}), 400
+
+    result = users_collection.delete_one({
+        "_id": ObjectId(player_id),
+        "role": "user"
+    })
+    if result.deleted_count == 0:
+        return jsonify({"error": "Player not found"}), 404
+    return jsonify({"message": "Player deleted"}), 200
 
 
 @app.patch("/api/admin/players/<player_id>/games")

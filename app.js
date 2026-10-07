@@ -46,9 +46,179 @@ async function loadUser() {
     const data = await response.json();
 
     document.getElementById("userName").textContent = data.name;
+    currentUserName = data.name;
+    loadBalance();
+    loadGameAccess();
+    loadGameHistory();
 }
 
+let currentUserName = "";
+
+async function loadBalance() {
+    const response = await fetch(API_URL);
+    if (!response.ok) return null;
+    const data = await response.json();
+    document.getElementById("chipBalance").textContent = data.balance;
+    return Number(data.balance);
+}
+
+async function loadGameAccess() {
+    try {
+        const response = await fetch("/api/game-access", { credentials: "same-origin" });
+        if (!response.ok) throw new Error("Could not load game access.");
+        const data = await response.json();
+        window.dispatchEvent(new CustomEvent("game-access-updated", {
+            detail: { blockedGames: Array.isArray(data.blocked_games) ? data.blocked_games : [] }
+        }));
+    } catch {
+        window.dispatchEvent(new CustomEvent("game-access-updated", {
+            detail: { blockedGames: ["Blackjack", "Roulette"] }
+        }));
+    }
+}
+
+async function gameRequest(endpoint, payload) {
+    const response = await fetch(endpoint, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data.error || "Could not update your game balance.");
+    }
+    return data;
+}
+
+function updateBalanceDisplay(balance) {
+    document.getElementById("chipBalance").textContent = balance;
+}
+
+let currentHistoryPage = 1;
+let totalHistoryPages = 1;
+
+async function loadGameHistory(page = currentHistoryPage) {
+    const historyBody = document.getElementById("historyBody");
+    try {
+        const response = await fetch(`/api/game-history?page=${page}`, { credentials: "same-origin" });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "Could not load bet history.");
+
+        currentHistoryPage = data.page;
+        totalHistoryPages = data.total_pages;
+        document.getElementById("historyPageStatus").textContent =
+            `Page ${currentHistoryPage} of ${totalHistoryPages}`;
+        document.getElementById("historyPrevious").disabled = currentHistoryPage <= 1;
+        document.getElementById("historyNext").disabled = currentHistoryPage >= totalHistoryPages;
+
+        historyBody.replaceChildren();
+        if (!data.bets.length) {
+            const row = historyBody.insertRow();
+            const cell = row.insertCell();
+            cell.colSpan = 4;
+            cell.textContent = "No settled bets yet.";
+            return;
+        }
+
+        for (const bet of data.bets) {
+            const row = historyBody.insertRow();
+            row.insertCell().textContent = bet.game || "Unknown";
+            row.insertCell().textContent = Number(bet.amount || 0).toLocaleString("en-US");
+
+            const resultCell = row.insertCell();
+            const outcome = ["win", "loss", "push"].includes(bet.outcome) ? bet.outcome : "loss";
+            resultCell.textContent = outcome[0].toUpperCase() + outcome.slice(1);
+            if (outcome === "win") resultCell.className = "history-win";
+            if (outcome === "loss") resultCell.className = "history-loss";
+
+            row.insertCell().textContent = Number(bet.payout || 0).toLocaleString("en-US");
+        }
+    } catch (error) {
+        historyBody.replaceChildren();
+        document.getElementById("historyPageStatus").textContent = "History unavailable";
+        document.getElementById("historyPrevious").disabled = true;
+        document.getElementById("historyNext").disabled = true;
+        const row = historyBody.insertRow();
+        const cell = row.insertCell();
+        cell.colSpan = 4;
+        cell.textContent = error.message || "Could not load bet history.";
+    }
+}
+
+document.getElementById("historyPrevious").addEventListener("click", () => {
+    if (currentHistoryPage > 1) loadGameHistory(currentHistoryPage - 1);
+});
+
+document.getElementById("historyNext").addEventListener("click", () => {
+    if (currentHistoryPage < totalHistoryPages) loadGameHistory(currentHistoryPage + 1);
+});
+
 loadUser();
+window.setInterval(loadGameAccess, 5000);
+
+
+/* =====================================================
+   ADD FUNDS
+   ===================================================== */
+
+const addFundsButton = document.getElementById("addFundsButton");
+const addFundsPanel = document.getElementById("addFundsPanel");
+const fundsPlayer = document.getElementById("fundsPlayer");
+const fundsAmount = document.getElementById("fundsAmount");
+const fundsMessage = document.getElementById("fundsMessage");
+
+addFundsButton.addEventListener("click", async () => {
+    addFundsPanel.hidden = !addFundsPanel.hidden;
+    if (addFundsPanel.hidden) return;
+
+    fundsMessage.textContent = "";
+    const response = await fetch("/api/players");
+    if (!response.ok) {
+        fundsMessage.textContent = "Could not load players.";
+        return;
+    }
+    const data = await response.json();
+    fundsPlayer.innerHTML = "";
+    const allowedPlayers = Array.isArray(data.players) ? data.players : [];
+    allowedPlayers.forEach(player => {
+        const option = document.createElement("option");
+        option.value = player.id;
+        option.textContent = `${player.name} (${player.email})`;
+        fundsPlayer.appendChild(option);
+    });
+    if (fundsPlayer.options.length > 0) {
+        fundsPlayer.value = fundsPlayer.options[0].value;
+    }
+});
+
+document.getElementById("fundsCancel").addEventListener("click", () => {
+    addFundsPanel.hidden = true;
+});
+
+document.getElementById("fundsSubmit").addEventListener("click", async () => {
+    const amount = Number(fundsAmount.value);
+    if (!fundsPlayer.value || !Number.isInteger(amount) || amount <= 0) {
+        fundsMessage.textContent = "Enter a positive whole number.";
+        return;
+    }
+
+    const response = await fetch("/api/add-funds", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount })
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+        fundsMessage.textContent = data.error || "Failed to add funds.";
+        return;
+    }
+
+    fundsMessage.textContent = `Added ${amount} chips to ${data.name}.`;
+    fundsAmount.value = "";
+    loadBalance();
+});
 
 
 
@@ -60,12 +230,35 @@ loadUser();
 const blackjackDeal = document.getElementById("blackjackDeal");
 
 if (blackjackDeal) {
+    const blackjackWagerInput = document.getElementById("blackjackWager");
+    const blackjackWagerButton = document.getElementById("blackjackWagerButton");
+    const blackjackWagerStatus = document.getElementById("blackjackWagerStatus");
 
     let blackjackDeck = [];
     let playerHand = [];
     let dealerHand = [];
+    let blackjackWager = 0;
+    let blackjackBetId = null;
+    let blackjackPendingOutcome = null;
+    let blackjackAccessRestricted = true;
+    let blackjackWagerRequestPending = false;
 
     let blackjackGameOver = true;
+
+    function syncBlackjackWagerAccess() {
+        blackjackWagerButton.disabled = blackjackAccessRestricted || blackjackWager > 0 || blackjackWagerRequestPending;
+        if (blackjackWager <= 0) {
+            blackjackWagerStatus.textContent = blackjackAccessRestricted
+                ? "Blackjack access is restricted by an admin."
+                : "No wager added.";
+        }
+    }
+
+    window.addEventListener("game-access-updated", event => {
+        blackjackAccessRestricted = event.detail.blockedGames.includes("Blackjack");
+        syncBlackjackWagerAccess();
+    });
+    syncBlackjackWagerAccess();
 
 
     // Create a new deck
@@ -180,8 +373,65 @@ if (blackjackDeal) {
     }
 
 
+    async function addBlackjackWager() {
+        if (!blackjackGameOver) {
+            document.getElementById("blackjackMessage").textContent =
+                "You can change your wager after this hand is over.";
+            return;
+        }
+
+        const amount = Number(blackjackWagerInput.value);
+        if (blackjackWagerInput.value === "" || !Number.isSafeInteger(amount) || amount <= 0) {
+            document.getElementById("blackjackMessage").textContent =
+                "Enter a positive whole-number wager.";
+            return;
+        }
+
+        blackjackWagerRequestPending = true;
+        syncBlackjackWagerAccess();
+        blackjackDeal.disabled = true;
+
+        try {
+            const wager = await gameRequest("/api/games/wager", {
+                game: "Blackjack",
+                amount
+            });
+            blackjackWager = amount;
+            blackjackBetId = wager.bet_id;
+            updateBalanceDisplay(wager.balance);
+            blackjackWagerStatus.textContent = `Current wager: ${amount} chips`;
+            blackjackWagerInput.value = "";
+            document.getElementById("blackjackMessage").textContent =
+                "Wager added. Deal when you are ready.";
+        } catch (error) {
+            document.getElementById("blackjackMessage").textContent = error.message;
+        } finally {
+            blackjackWagerRequestPending = false;
+            syncBlackjackWagerAccess();
+            blackjackDeal.disabled = false;
+        }
+    }
+
+
     // Start game
-    function startBlackjack() {
+    async function startBlackjack() {
+        if (!blackjackGameOver) {
+            return;
+        }
+
+        if (blackjackBetId && blackjackPendingOutcome) {
+            await finishBlackjackHand(blackjackPendingOutcome);
+            return;
+        }
+
+        if (blackjackWager <= 0 || !blackjackBetId) {
+            document.getElementById("blackjackMessage").textContent =
+                "Add a wager before dealing.";
+            return;
+        }
+
+        blackjackDeal.disabled = true;
+        blackjackWagerButton.disabled = true;
 
         blackjackDeck = shuffleDeck(createBlackjackDeck());
 
@@ -209,13 +459,47 @@ if (blackjackDeal) {
 
         // Check for natural blackjack
         if (getBlackjackValue(playerHand) === 21) {
-            dealerTurn();
+            await dealerTurn();
+        }
+    }
+
+
+    async function finishBlackjackHand(outcome) {
+        blackjackGameOver = true;
+        blackjackPendingOutcome = outcome;
+        document.getElementById("blackjackHit").disabled = true;
+        document.getElementById("blackjackStand").disabled = true;
+        blackjackDeal.disabled = true;
+        blackjackWagerButton.disabled = true;
+
+        try {
+            const settlement = await gameRequest("/api/games/settle", {
+                bet_id: blackjackBetId,
+                outcome
+            });
+            updateBalanceDisplay(settlement.balance);
+            await loadGameHistory(1);
+            blackjackBetId = null;
+            blackjackPendingOutcome = null;
+            blackjackWager = 0;
+            blackjackWagerStatus.textContent = "No wager added.";
+            blackjackDeal.disabled = false;
+            syncBlackjackWagerAccess();
+            blackjackDeal.textContent = "New Game";
+            return settlement;
+        } catch (error) {
+            document.getElementById("blackjackMessage").textContent =
+                `${error.message} Use Retry Settlement to try again.`;
+            blackjackDeal.textContent = "Retry Settlement";
+            blackjackDeal.disabled = false;
+            syncBlackjackWagerAccess();
+            return null;
         }
     }
 
 
     // Hit
-    function blackjackHit() {
+    async function blackjackHit() {
 
         if (blackjackGameOver) {
             return;
@@ -229,41 +513,34 @@ if (blackjackDeal) {
 
         if (playerTotal > 21) {
 
-            blackjackGameOver = true;
+            const settlement = await finishBlackjackHand("loss");
+            if (!settlement) return;
 
             document.getElementById("blackjackMessage").textContent =
                 "You busted! Dealer wins.";
-
-            document.getElementById("blackjackHit").disabled = true;
-            document.getElementById("blackjackStand").disabled = true;
 
             displayBlackjackCards();
         }
 
         else if (playerTotal === 21) {
-            dealerTurn();
+            await dealerTurn();
         }
     }
 
 
     // Stand
-    function blackjackStand() {
+    async function blackjackStand() {
 
         if (blackjackGameOver) {
             return;
         }
 
-        dealerTurn();
+        await dealerTurn();
     }
 
 
     // Dealer's turn
-    function dealerTurn() {
-
-        blackjackGameOver = true;
-
-        document.getElementById("blackjackHit").disabled = true;
-        document.getElementById("blackjackStand").disabled = true;
+    async function dealerTurn() {
 
         // Dealer must hit below 17
         while (getBlackjackValue(dealerHand) < 17) {
@@ -296,6 +573,18 @@ if (blackjackDeal) {
             message = "It's a tie!";
         }
 
+        const outcome = message === "You win!" || message === "Dealer busted! You win!"
+            ? "win"
+            : message === "It's a tie!" ? "push" : "loss";
+        const settlement = await finishBlackjackHand(outcome);
+        if (!settlement) return;
+
+        if (settlement.net_winnings > 0) {
+            message += ` You won ${settlement.net_winnings} chips.`;
+        } else if (outcome === "push") {
+            message += " Your wager was returned.";
+        }
+
         document.getElementById("blackjackMessage").textContent = message;
 
         displayBlackjackCards();
@@ -303,6 +592,7 @@ if (blackjackDeal) {
 
 
     blackjackDeal.addEventListener("click", startBlackjack);
+    blackjackWagerButton.addEventListener("click", addBlackjackWager);
 
     document
         .getElementById("blackjackHit")
@@ -352,6 +642,23 @@ if (rouletteButton) {
 
 
     let rouletteFinished = false;
+    let rouletteBetId = null;
+    let rouletteAccessRestricted = true;
+    let rouletteSpinning = false;
+    let rouletteSettlementPending = false;
+
+    function syncRouletteAccess() {
+        rouletteButton.disabled = rouletteSpinning || rouletteSettlementPending || (rouletteAccessRestricted && !rouletteBetId);
+        rouletteButton.title = rouletteAccessRestricted && !rouletteBetId
+            ? "Access to Roulette is restricted by an admin."
+            : "";
+    }
+
+    window.addEventListener("game-access-updated", event => {
+        rouletteAccessRestricted = event.detail.blockedGames.includes("Roulette");
+        syncRouletteAccess();
+    });
+    syncRouletteAccess();
 
 
     function getRouletteColor(number) {
@@ -368,117 +675,92 @@ if (rouletteButton) {
     }
 
 
-    function spinRoulette() {
+    async function settleRouletteBet() {
+        rouletteSettlementPending = true;
+        syncRouletteAccess();
+        try {
+            const settlement = await gameRequest("/api/games/settle", {
+                bet_id: rouletteBetId
+            });
+            updateBalanceDisplay(settlement.balance);
+            await loadGameHistory(1);
+            document.getElementById("rouletteMessage").textContent =
+                settlement.outcome === "win"
+                    ? `You won ${settlement.net_winnings} chips!`
+                    : "You lost your wager.";
+            rouletteBetId = null;
+            rouletteButton.textContent = "Retry";
+        } catch (error) {
+            document.getElementById("rouletteMessage").textContent =
+                `${error.message} Click Retry settlement to try again.`;
+            rouletteButton.textContent = "Retry settlement";
+        } finally {
+            rouletteFinished = true;
+            rouletteSettlementPending = false;
+            syncRouletteAccess();
+        }
+    }
 
-        const selectedColor =
-            document.getElementById("rouletteColor").value;
 
-        const betInput =
-            document.getElementById("rouletteBet");
+    async function spinRoulette() {
+        if (rouletteFinished) {
+            if (rouletteBetId) {
+                rouletteButton.disabled = true;
+                await settleRouletteBet();
+                return;
+            }
+            resetRoulette();
+            return;
+        }
 
+        const selectedColor = document.getElementById("rouletteColor").value;
+        const betInput = document.getElementById("rouletteBet");
         const bet = Number(betInput.value);
 
-
-        // Make sure a valid bet was entered
-        if (isNaN(bet) || bet < 0 || betInput.value === "") {
-
+        if (!Number.isSafeInteger(bet) || bet < 1 || betInput.value === "") {
             document.getElementById("rouletteMessage").textContent =
                 "Please enter a valid bet amount.";
-
             return;
         }
 
+        rouletteSpinning = true;
+        syncRouletteAccess();
 
-        // If the game has already finished, reset it
-        if (rouletteFinished) {
-
-            resetRoulette();
-
+        let wager;
+        try {
+            wager = await gameRequest("/api/games/wager", {
+                game: "Roulette",
+                amount: bet,
+                choice: selectedColor
+            });
+        } catch (error) {
+            document.getElementById("rouletteMessage").textContent = error.message;
+            rouletteSpinning = false;
+            syncRouletteAccess();
             return;
         }
 
-
-        rouletteButton.disabled = true;
-
+        rouletteBetId = wager.bet_id;
+        updateBalanceDisplay(wager.balance);
         document.getElementById("rouletteMessage").textContent = "";
 
-        const resultElement =
-            document.getElementById("rouletteResult");
+        const resultElement = document.getElementById("rouletteResult");
+        resultElement.innerHTML = "<p class='spinning-text'>Spinning...</p>";
 
-        resultElement.innerHTML =
-            "<p class='spinning-text'>Spinning...</p>";
-
-
-        // Delay before revealing result
-        setTimeout(() => {
-
-            // Generate number from 0-37
-            const randomNumber = Math.floor(Math.random() * 38);
-
-            let displayedNumber;
-
-            if (randomNumber === 0) {
-                displayedNumber = 0;
-            }
-
-            else if (randomNumber === 37) {
-                displayedNumber = "00";
-            }
-
-            else {
-                displayedNumber = randomNumber;
-            }
-
-
-            const resultColor =
-                getRouletteColor(displayedNumber);
-
+        setTimeout(async () => {
+            const displayedNumber = wager.result;
+            const resultColor = wager.result_color;
 
             resultElement.innerHTML = `
                 <div class="roulette-number ${resultColor}">
                     ${displayedNumber}
                 </div>
-
-                <p>
-                    Result: <strong>${resultColor.toUpperCase()}</strong>
-                </p>
+                <p>Result: <strong>${resultColor.toUpperCase()}</strong></p>
             `;
 
-
-            // Determine whether player won
-            if (selectedColor === resultColor) {
-
-                // Green pays 17:1 in roulette
-                // Red/black pays 1:1
-
-                if (selectedColor === "green") {
-
-                    const winnings = bet * 17;
-
-                    document.getElementById("rouletteMessage").textContent =
-                        `You won $${winnings.toFixed(2)}! Green hit!`;
-
-                } else {
-
-                    const winnings = bet;
-
-                    document.getElementById("rouletteMessage").textContent =
-                        `You won $${winnings.toFixed(2)}!`;
-                }
-
-            } else {
-
-                document.getElementById("rouletteMessage").textContent =
-                    `You lost your $${bet.toFixed(2)} bet.`;
-            }
-
-
             rouletteFinished = true;
-
-            rouletteButton.disabled = false;
-
-            rouletteButton.textContent = "Retry";
-
+            rouletteSpinning = false;
+            await settleRouletteBet();
         }, 2000);
     }
 
@@ -497,8 +779,31 @@ if (rouletteButton) {
         rouletteButton.textContent = "Spin";
 
         rouletteFinished = false;
+        rouletteSpinning = false;
+        rouletteSettlementPending = false;
+        syncRouletteAccess();
     }
 
 
     rouletteButton.addEventListener("click", spinRoulette);
 }
+
+
+const refreshLeaderboardButton = document.getElementById("refreshLeaderboard");
+const leaderboardList = document.getElementById("leaderboardList");
+
+async function refreshLeaderboard() {
+    const response = await fetch("api/get-leaderboard");
+    if (!response.ok) {
+        leaderboardList.innerHTML = "<li>Failed to load leaderboard.</li>";
+        return;
+    }
+    const data = await response.json();
+    leaderboardList.innerHTML = data.players.map(player => `<li>${player.name}: ${player.score}</li>`).join("");
+}
+
+refreshLeaderboardButton.addEventListener("click", async () => {
+    await refreshLeaderboard();
+});
+
+refreshLeaderboard();

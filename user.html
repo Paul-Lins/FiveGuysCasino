@@ -6,10 +6,10 @@
     <title>Five Guys Casino</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body id="user-page">
     <header class="topbar">
         <div class="nav">
-            <span class="logo">Five Guys Casino</span>
+            <div class="brand-mark" aria-hidden="true">5G</div>
             <span>Welcome, <strong id= "userName">player</strong></span>
             <span>🪙 <strong id="chipBalance">0</strong> chips</span>
             <button id="addFundsButton" type="button">Add Funds</button>
@@ -17,8 +17,19 @@
         </div>
     </header>
 
+    <section class="panel" id="addFundsPanel" hidden>
+        <h2>Add Funds</h2>
+        <label for="fundsPlayer">Assign to:</label>
+        <select id="fundsPlayer"></select>
+        <label for="fundsAmount">Amount:</label>
+        <input type="number" id="fundsAmount" min="1" step="1" placeholder="Enter amount">
+        <button id="fundsSubmit" type="button">Assign Funds</button>
+        <button id="fundsCancel" type="button">Cancel</button>
+        <p id="fundsMessage"></p>
+    </section>
+
     <main class="dashboard">
-        <section class="grid">
+        <section class="grid casino-table">
         <!--
         =========================
         BLACKJACK
@@ -44,7 +55,13 @@
 
                 </div>
 
-                <p id="blackjackMessage">Press Deal to start!</p>
+                <div class="roulette-controls blackjack-controls">
+                    <label for="blackjackWager">How much do you want to bet?</label>
+                    <input type="number" id="blackjackWager" min="1" step="1" placeholder="Enter amount">
+                    <button id="blackjackWagerButton" type="button">Add Wager</button>
+                </div>
+                <p id="blackjackWagerStatus" aria-live="polite">No wager added.</p>
+                <p id="blackjackMessage" role="status" aria-live="polite">Add a wager before dealing.</p>
 
                 <div class="game-buttons">
                     <button id="blackjackDeal">Deal</button>
@@ -105,24 +122,24 @@
                             <th>Game</th>
                             <th>Wager</th>
                             <th>Result</th>
-                            <th>Balance</th>
+                            <th>Payout</th>
                         </tr>
                     </thead>
-                    <tbody id="historyBody">
-                        <tr><td>Blackjack</td><td>50</td><td>Win</td><td>1050</td></tr>
-                        <tr><td>Roulette</td><td>100</td><td>Loss</td><td>950</td></tr>
-                        <tr><td>Roulette</td><td>25</td><td>Win</td><td>975</td></tr>
-                    </tbody>
+                    <tbody id="historyBody"></tbody>
                 </table>
+                <div class="history-pagination">
+                    <button id="historyPrevious" type="button" disabled>Previous</button>
+                    <span id="historyPageStatus" aria-live="polite">Page 1 of 1</span>
+                    <button id="historyNext" type="button" disabled>Next</button>
+                </div>
             </div>
 
             <div class="panel">
-                <h2>Leaderboard</h2>
-                <ol id="leaderboardList">
-                    <li>troy  -5,200</li>
-                    <li>paul  -3,900</li>
-                    <li>logan -2,750</li>
-                </ol>
+                <div class="leaderboard-header">
+                    <h2>Leaderboard</h2>
+                    <button id="refreshLeaderboard" type="button">Refresh</button>
+                </div>
+                <ol id="leaderboardList"></ol>
             </div>
 
         </section>
