@@ -640,6 +640,85 @@ if (rouletteButton) {
         29, 31, 33, 35
     ];
 
+    const rouletteWheelLayout = [
+        0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5,
+        24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26, 37
+    ];
+
+    function normalizeRouletteNumber(value) {
+        if (value === "00") return 37;
+        return Number(value);
+    }
+
+    function roulettePocketLabel(value) {
+        return normalizeRouletteNumber(value) === 37 ? "00" : String(value);
+    }
+
+    function roulettePocketColor(value) {
+        const numericValue = normalizeRouletteNumber(value);
+        if (numericValue === 0 || numericValue === 37) return "green";
+        return redNumbers.includes(numericValue) ? "red" : "black";
+    }
+
+    function buildRouletteWheel() {
+        const wheel = document.getElementById("rouletteWheel");
+        if (!wheel) return;
+
+        const step = 360 / rouletteWheelLayout.length;
+        const sectors = rouletteWheelLayout.map((value, index) => {
+            const start = index * step;
+            const end = (index + 1) * step;
+            const color = roulettePocketColor(value);
+            const fill = color === "red" ? "#c62828" : color === "green" ? "#087a4b" : "#171717";
+            return `${fill} ${start}deg ${end}deg`;
+        });
+        wheel.style.background = `radial-gradient(circle at center, transparent 0 37%, rgba(0,0,0,0.22) 38% 100%), repeating-conic-gradient(from 0deg, rgba(255,255,255,0.65) 0deg 0.45deg, transparent 0.45deg ${step}deg), conic-gradient(from 0deg, ${sectors.join(", ")})`;
+
+        wheel.dataset.rotation = "0";
+        wheel.style.transform = "rotate(0deg)";
+    }
+
+    function animateRouletteWheel(value) {
+        const wheel = document.getElementById("rouletteWheel");
+        if (!wheel) return;
+
+        const numericValue = normalizeRouletteNumber(value);
+        const targetIndex = rouletteWheelLayout.indexOf(numericValue);
+        const step = 360 / rouletteWheelLayout.length;
+        const currentRotation = Number(wheel.dataset.rotation || 0);
+        const targetCenter = targetIndex * step + step / 2;
+        const alignment = (360 - ((targetCenter + currentRotation) % 360) + 360) % 360;
+        const spinTurns = 6 + Math.floor(Math.random() * 3);
+        const targetRotation = currentRotation + spinTurns * 360 + alignment;
+
+        wheel.dataset.rotation = String(targetRotation);
+        wheel.style.transform = `rotate(${targetRotation}deg)`;
+    }
+
+    function stopRouletteBall() {
+        const orbit = document.getElementById("rouletteBallOrbit");
+        const wheelWrap = document.querySelector(".roulette-wheel-wrap");
+        if (!orbit || !wheelWrap) return Promise.resolve();
+
+        const matrix = new DOMMatrixReadOnly(getComputedStyle(orbit).transform);
+        let currentAngle = Math.atan2(matrix.b, matrix.a) * 180 / Math.PI;
+        if (currentAngle > 0) currentAngle -= 360;
+
+        orbit.style.transform = `rotate(${currentAngle}deg)`;
+        wheelWrap.classList.remove("is-spinning");
+        orbit.style.transition = "transform 4.75s cubic-bezier(0.12, 0.82, 0.22, 1)";
+        void orbit.offsetWidth;
+        orbit.style.transform = `rotate(${Math.floor(currentAngle / 360) * 360 - 360}deg)`;
+
+        return new Promise(resolve => {
+            orbit.addEventListener("transitionend", () => {
+                orbit.style.transition = "";
+                orbit.style.transform = "rotate(0deg)";
+                resolve();
+            }, { once: true });
+            window.setTimeout(resolve, 5000);
+        });
+    }
 
     let rouletteFinished = false;
     let rouletteBetId = null;
@@ -725,6 +804,14 @@ if (rouletteButton) {
 
         rouletteSpinning = true;
         syncRouletteAccess();
+        const wheel = document.getElementById("rouletteWheel");
+        const wheelWrap = document.querySelector(".roulette-wheel-wrap");
+        if (wheel && wheelWrap) {
+            const spinStart = Number(wheel.dataset.rotation || 0);
+            wheel.dataset.rotation = String(spinStart + 720);
+            wheel.style.transform = `rotate(${spinStart + 720}deg)`;
+            wheelWrap.classList.add("is-spinning");
+        }
 
         let wager;
         try {
@@ -735,6 +822,7 @@ if (rouletteButton) {
             });
         } catch (error) {
             document.getElementById("rouletteMessage").textContent = error.message;
+            await stopRouletteBall();
             rouletteSpinning = false;
             syncRouletteAccess();
             return;
@@ -747,21 +835,20 @@ if (rouletteButton) {
         const resultElement = document.getElementById("rouletteResult");
         resultElement.innerHTML = "<p class='spinning-text'>Spinning...</p>";
 
-        setTimeout(async () => {
-            const displayedNumber = wager.result;
-            const resultColor = wager.result_color;
+        const resultColor = wager.result_color;
+        animateRouletteWheel(wager.result);
+        await Promise.all([
+            stopRouletteBall(),
+            new Promise(resolve => window.setTimeout(resolve, 5250))
+        ]);
+        resultElement.innerHTML = `
+            <div class="roulette-result-pill ${resultColor}">${resultColor.toUpperCase()}</div>
+            <p>Result: <strong>${resultColor.toUpperCase()}</strong></p>
+        `;
 
-            resultElement.innerHTML = `
-                <div class="roulette-number ${resultColor}">
-                    ${displayedNumber}
-                </div>
-                <p>Result: <strong>${resultColor.toUpperCase()}</strong></p>
-            `;
-
-            rouletteFinished = true;
-            rouletteSpinning = false;
-            await settleRouletteBet();
-        }, 2000);
+        rouletteFinished = true;
+        rouletteSpinning = false;
+        await settleRouletteBet();
     }
 
 
@@ -776,6 +863,19 @@ if (rouletteButton) {
 
         document.getElementById("rouletteMessage").textContent = "";
 
+        const wheel = document.getElementById("rouletteWheel");
+        const wheelWrap = document.querySelector(".roulette-wheel-wrap");
+        if (wheel) {
+            wheel.dataset.rotation = "0";
+            wheel.style.transform = "rotate(0deg)";
+        }
+        if (wheelWrap) wheelWrap.classList.remove("is-spinning");
+        const orbit = document.getElementById("rouletteBallOrbit");
+        if (orbit) {
+            orbit.style.transition = "none";
+            orbit.style.transform = "rotate(0deg)";
+        }
+
         rouletteButton.textContent = "Spin";
 
         rouletteFinished = false;
@@ -784,7 +884,7 @@ if (rouletteButton) {
         syncRouletteAccess();
     }
 
-
+    buildRouletteWheel();
     rouletteButton.addEventListener("click", spinRoulette);
 }
 
